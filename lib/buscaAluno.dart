@@ -1,33 +1,25 @@
 import 'package:flutter/material.dart';
-import 'package:sqflite/sqflite.dart';
-import 'package:mysql1/mysql1.dart';
+import 'package:projetoeureka3/appbar.dart';
+import 'package:projetoeureka3/mysql.dart';
 
 class BuscaAluno extends StatefulWidget {
-  const BuscaAluno({Key? key}) : super(key: key);
+  const BuscaAluno({super.key});
 
   @override
   State<BuscaAluno> createState() => _BuscaAlunoState();
 }
 
 class _BuscaAlunoState extends State<BuscaAluno> {
-  String? nomeAluno;
-  String? nomeTrabalho;
-  int? numeroEstande;
-  String? descricaoTrabalho;
-  bool isLoading = true; 
+  var db = new Mysql();
+  var nome = '';
+  var projeto = '';
+  var estande = '';
+  var desc = '';
+  
 
-  Future<void> _fetchDataFromMySQL() async {
-    try {
-      final conn = await MySqlConnection.connect(ConnectionSettings(
-        host: 'localhost',
-        port: 3306, 
-        user: 'root',
-        password: '23.01182-3',
-        db: 'Eureka_2023',
-      ));
-
-      Results result = await conn.query('''
-        SELECT
+  void _getAluno() {
+    db.getConnection().then((conn) {
+      String sql = """ SELECT
         Eureka_2023.trabalhos.idTrabalho AS idTrabalho,
         Eureka_2023.trabalhos.numeroEstande AS numeroEstande,
         CONCAT(
@@ -83,48 +75,38 @@ class _BuscaAlunoState extends State<BuscaAluno> {
     WHERE
         Eureka_2023.trabalhos.ativo = 1
         AND b.codigoHabilitacao NOT IN ('IMT', 'IE')
-        AND `Eureka_2023`.`usuarios`.`nome` = 'ANA LUISA ALVES DA CUNHA';
-      ''');
-
-      for (var row in result) {
-        setState(() {
-          nomeAluno = row['nomeAluno'];
-          nomeTrabalho = row['tituloTrabalho'];
-          numeroEstande = row['numeroEstande'];
-          descricaoTrabalho = row['descricaoTrabalho'];
-          isLoading = false; 
-        });
-      }
-
-      await conn.close();
-    } catch (e) {
-      print('Error fetching data: $e');
-    }
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _fetchDataFromMySQL();
+        AND `Eureka_2023`.`usuarios`.`nome` = 'ANA LUISA ALVES DA CUNHA';""";
+      conn.query(sql).then((results) {
+        for(var row in results){
+          setState(() {
+            nome = row['nomeAluno'];
+            projeto = row['tituloTrabalho'];
+            estande = row['numeroEstande'];
+            desc = row['descricaoTrabalho'];
+          });
+        }
+      });
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(),
+    return  Scaffold(
+      appBar: AppBarM(),
       body: Center(
-        child: isLoading
-            ? CircularProgressIndicator()
-            : Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text("Aluno: ${nomeAluno ?? 'N/A'}"),
-                  Text("Trabalho: ${nomeTrabalho ?? 'N/A'}"),
-                  Text("Estande: ${numeroEstande ?? 'N/A'}"),
-                  Text("Descrição: ${descricaoTrabalho ?? 'N/A'}"),
-                ],
-              ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text("Aluno: $nome"),
+            Text("Trabalho: $projeto"),
+            Text("Estande: $estande"),
+            Text("Descrição: $desc"),
+          ],
+        ),
       ),
+      floatingActionButton: FloatingActionButton(onPressed: _getAluno,
+      tooltip: 'Increment',
+      child: Icon(Icons.add),),
     );
   }
 }
