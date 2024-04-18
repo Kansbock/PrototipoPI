@@ -3,23 +3,23 @@ import 'package:projetoeureka3/appbar.dart';
 import 'package:projetoeureka3/mysql.dart';
 
 class BuscaAluno extends StatefulWidget {
-  const BuscaAluno({super.key});
+  const BuscaAluno({Key? key}) : super(key: key);
 
   @override
   State<BuscaAluno> createState() => _BuscaAlunoState();
 }
 
 class _BuscaAlunoState extends State<BuscaAluno> {
-  var db = new Mysql();
-  var nome = '';
-  var projeto = '';
-  var estande = '';
-  var desc = '';
-  
+  final Mysql db = Mysql();
+  String nome = '';
+  String projeto = '';
+  String estande = '';
+  String desc = '';
 
   void _getAluno() {
     db.getConnection().then((conn) {
-      String sql = """ SELECT
+      String sql = """
+        SELECT
         Eureka_2023.trabalhos.idTrabalho AS idTrabalho,
         Eureka_2023.trabalhos.numeroEstande AS numeroEstande,
         CONCAT(
@@ -75,23 +75,55 @@ class _BuscaAlunoState extends State<BuscaAluno> {
     WHERE
         Eureka_2023.trabalhos.ativo = 1
         AND b.codigoHabilitacao NOT IN ('IMT', 'IE')
-        AND `Eureka_2023`.`usuarios`.`nome` = 'ANA LUISA ALVES DA CUNHA';""";
+        AND `Eureka_2023`.`usuarios`.`nome` = 'ANA LUISA ALVES DA CUNHA';';
+      """;
+
       conn.query(sql).then((results) {
-        for(var row in results){
+        if (results.isNotEmpty) {
           setState(() {
+            final row = results.first;
             nome = row['nomeAluno'];
             projeto = row['tituloTrabalho'];
             estande = row['numeroEstande'];
             desc = row['descricaoTrabalho'];
           });
+        } else {
+          // Handle case when no results are found
+          setState(() {
+            nome = 'Not found';
+            projeto = '';
+            estande = '';
+            desc = '';
+          });
         }
+      }).catchError((error) {
+        // Handle query execution error
+        print("Error executing query: $error");
+        setState(() {
+          nome = 'Error';
+          projeto = '';
+          estande = '';
+          desc = '';
+        });
+      }).whenComplete(() {
+        // Close connection after query execution
+        conn.close();
+      });
+    }).catchError((error) {
+      // Handle connection error
+      print("Error connecting to database: $error");
+      setState(() {
+        nome = 'Error';
+        projeto = '';
+        estande = '';
+        desc = '';
       });
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    return  Scaffold(
+    return Scaffold(
       appBar: AppBarM(),
       body: Center(
         child: Column(
@@ -104,9 +136,11 @@ class _BuscaAlunoState extends State<BuscaAluno> {
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(onPressed: _getAluno,
-      tooltip: 'Increment',
-      child: Icon(Icons.add),),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _getAluno,
+        tooltip: 'Search',
+        child: Icon(Icons.search),
+      ),
     );
   }
 }
